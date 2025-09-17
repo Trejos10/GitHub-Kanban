@@ -27,4 +27,4 @@ COPY public/ public/
 EXPOSE 8000
 
 # 定义容器启动命令
-CMD ["deno", "task", "start"]
+CMD ["deno", "run", "-A", ".\src\server.ts"]
