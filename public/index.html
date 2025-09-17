@@ -65,7 +65,6 @@ function timeAgo(ts) { const s=Math.floor((Date.now()-new Date(ts).getTime())/10
 function esc(s){return (s||"").replace(/[<>&]/g, t=>({ "<":"&lt;",">":"&gt;","&":"&amp;" }[t]));}
 async function getJSON(url){ const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(url+" "+r.status);return r.json();}
 
-// --- THIS IS THE KEY CHANGE ---
 function renderSummary(repos){
   // Sort repos by pushed_at date, descending (most recent first)
   const sortedRepos = repos.sort((a, b) => new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime());
@@ -76,13 +75,13 @@ function renderSummary(repos){
         <a class="title" href="${r.html_url}" target="_blank" rel="noreferrer" title="${esc(r.repo)}">${esc(r.displayName)}</a>
         <span class="muted small">${timeAgo(r.pushed_at)} 更新</span>
       </div>
+      <div class="muted small" style="margin-top:6px">${esc(r.repo)}</div>
       <div class="repo-stats">
         <span class="chip">⭐ ${r.stargazers_count}</span> <span class="chip">🍴 ${r.forks_count}</span> <span class="chip">🧵 Open: ${r.open_issues_count}</span>
       </div>
       <div class="muted small" style="margin-top:6px">${esc(r.description)}</div>
     </div>`).join('');
 }
-// --- END OF KEY CHANGE ---
 
 function renderFeed(items){
   feedEl.innerHTML = items.map(it => `
@@ -91,7 +90,9 @@ function renderFeed(items){
       <div>
         <div class="flex">
           <a class="title" href="${it.url}" target="_blank" rel="noreferrer">${esc(it.title)}</a>
-          <span class="muted small">@${esc(it.repo)}</span> <span class="muted small right">${timeAgo(it.when)}</span>
+          <!-- Use displayName, with repo ID as a tooltip on hover -->
+          <span class="muted small" title="@${esc(it.repo)}">${esc(it.displayName)}</span>
+          <span class="muted small right">${timeAgo(it.when)}</span>
         </div>
         <div class="muted small">${esc(it.extra)}</div>
       </div>

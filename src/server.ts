@@ -289,11 +289,18 @@ const REPO_EVENTS = new Map<string, any[]>();
 
 // Rebuild the global feed from cached per-repo events
 function rebuildGlobalFeed(cfg: AppConfig) {
-  const allEvents = Array.from(REPO_EVENTS.values()).flat();
-  FEED_ITEMS = allEvents
-    .flatMap(eventToFeedItems)
-    .sort(byDescTime)
-    .slice(0, cfg.feedLimit);
+    const allEvents = Array.from(REPO_EVENTS.values()).flat();
+    const repoNameMap = new Map(cfg.repos.map(r => [r.id, r.name]));
+
+    FEED_ITEMS = allEvents
+      .flatMap(eventToFeedItems) // Returns items with just the repo ID
+      .map(item => ({          // <-- ADDED THIS .map() STEP
+          ...item,
+          // Enrich the item with its displayName
+          displayName: repoNameMap.get(item.repo) || item.repo 
+      }))
+      .sort(byDescTime)
+      .slice(0, cfg.feedLimit);
 }
 
 /** ---------------- Update Scheduler ---------------- */
