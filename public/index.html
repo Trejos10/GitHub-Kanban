@@ -5,14 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>GitHub 多仓实时看板</title>
 <meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
   :root { --gap: 12px; --card: #fff; --muted:#666; --bg:#f6f8fa; --border:#e1e4e8; }
   @media (prefers-color-scheme: dark) {
     :root { --card:#0d1117; --bg:#010409; --border:#30363d; --muted:#8b949e; }
     a { color:#58a6ff; }
+    .github-icon:hover { color: #fff; } /* Dark mode hover */
   }
   html,body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;z-index:2}
+  header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;z-index:2;position:relative}
   h1{font-size:18px;margin:0 0 6px}
   main{max-width:1200px;margin:14px auto;padding:0 14px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
@@ -32,12 +34,28 @@
   .small{font-size:12px}
   .skeleton{background:linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0.12), rgba(0,0,0,0.06));height:14px;border-radius:6px;animation:sh 1.2s infinite}
   @keyframes sh {0%{background-position:-200px 0}100%{background-position:200px 0}}
+  
+  /* --- Modified styles for GitHub Icon --- */
+  .github-icon {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 28px; /* Control icon size */
+    transition: color .2s;
+    line-height: 1;
+  }
+  .github-icon:hover { color: #000; } /* Light mode hover */
 </style>
 </head>
 <body>
 <header>
   <h1>GitHub 多仓实时看板</h1>
   <div class="muted" id="meta">初始化中…</div>
+  <a href="https://github.com/CodeBoy2006/GitHub-Kanban" class="github-icon" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub">
+    <i class="fa-brands fa-github"></i>
+  </a>
 </header>
 <main>
   <div class="grid">
