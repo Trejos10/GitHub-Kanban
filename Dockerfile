@@ -6,6 +6,8 @@ FROM denoland/deno:alpine AS builder
 WORKDIR /app
 
 # 优先缓存依赖项
+# 只有当 deno.json 或 src/ 目录文件变化时，这一层才会重新执行
+COPY deno.json .
 COPY src/ src/
 RUN deno cache src/server.ts
 
@@ -20,6 +22,7 @@ COPY --from=builder /deno-dir/ /deno-dir/
 ENV DENO_DIR=/deno-dir
 
 # 拷贝应用代码
+COPY deno.json .
 COPY src/ src/
 COPY public/ public/
 
@@ -27,4 +30,4 @@ COPY public/ public/
 EXPOSE 8000
 
 # 定义容器启动命令
-CMD ["deno", "run", "-A", ".\src\server.ts"]
+CMD ["deno", "task", "start"]
