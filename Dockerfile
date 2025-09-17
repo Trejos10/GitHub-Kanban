@@ -1,5 +1,5 @@
 # ---- Stage 1: build fuck-u-code binary ----
-FROM golang:1.22-alpine AS fuc-build
+FROM golang:1.23-alpine AS fuc-build
 RUN apk add --no-cache git ca-certificates && update-ca-certificates
 ENV CGO_ENABLED=0 GO111MODULE=on GOBIN=/out
 RUN go install github.com/Done-0/fuck-u-code/cmd/fuck-u-code@latest
