@@ -2,24 +2,29 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>GitHub 多仓实时看板</title>
 <meta name="color-scheme" content="light dark">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
   :root { --gap: 12px; --card: #fff; --muted:#666; --bg:#f6f8fa; --border:#e1e4e8; }
+  :root { --radius: 10px; --tap: 40px; }
   @media (prefers-color-scheme: dark) {
     :root { --card:#0d1117; --bg:#010409; --border:#30363d; --muted:#8b949e; }
     a { color:#58a6ff; }
     .github-icon:hover { color: #fff; } /* Dark mode hover */
   }
   html,body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;z-index:2;position:relative}
-  h1{font-size:18px;margin:0 0 6px}
-  main{max-width:1200px;margin:14px auto;padding:0 14px}
+  header{
+    position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);
+    padding:calc(10px + env(safe-area-inset-top,0)) 14px 10px;z-index:2;position:relative
+  }
+  h1{font-size:clamp(16px,2.2vw,20px);margin:0 0 6px}
+  main{max-width:min(1400px,100%);margin:14px auto;padding:0 14px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
   @media (max-width:960px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px}
+  @media (min-width:1500px){.grid{grid-template-columns:2fr 1fr}} /* 超大屏更合理分栏 */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
   .muted{color:var(--muted);font-size:12px}
   .title{font-weight:600}
   .right{margin-left:auto}
@@ -32,8 +37,12 @@
   .icon{font-size:18px;line-height:24px;text-align:center}
   .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .small{font-size:12px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+  a,button{min-height:var(--tap);line-height:1.2}
+  a:focus-visible{outline:2px solid #6aa9ff;outline-offset:2px;border-radius:6px}
   .skeleton{background:linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0.12), rgba(0,0,0,0.06));height:14px;border-radius:6px;animation:sh 1.2s infinite}
   @keyframes sh {0%{background-position:-200px 0}100%{background-position:200px 0}}
+  @media (prefers-reduced-motion: reduce){ .skeleton{animation:none} }
   
   /* --- Modified styles for GitHub Icon --- */
   .github-icon {
@@ -45,6 +54,8 @@
     font-size: 28px; /* Control icon size */
     transition: color .2s;
     line-height: 1;
+    min-width: var(--tap);
+    min-height: var(--tap);
   }
   .github-icon:hover { color: #000; } /* Light mode hover */
 </style>
@@ -102,19 +113,23 @@ function renderSummary(repos){
 }
 
 function renderFeed(items){
-  feedEl.innerHTML = items.map(it => `
-    <div class="feed-item">
-      <div class="icon" title="${esc(it.repo)}">${ICONS[it.type]||it.icon||ICONS.default}</div>
-      <div>
-        <div class="flex">
-          <a class="title" href="${it.url}" target="_blank" rel="noreferrer">${esc(it.title)}</a>
-          <!-- Use displayName, with repo ID as a tooltip on hover -->
-          <span class="muted small" title="@${esc(it.repo)}">${esc(it.displayName)}</span>
-          <span class="muted small right">${timeAgo(it.when)}</span>
-        </div>
-        <div class="muted small">${esc(it.extra)}</div>
-      </div>
-    </div>`).join('');
+  feedEl.innerHTML = items.map(it => {
+    const base =
+`<div class="feed-item">
+  <div class="icon" title="${esc(it.repo)}">${ICONS[it.type]||it.icon||ICONS.default}</div>
+  <div>
+    <div class="flex">
+      <a class="title" href="${it.url}" target="_blank" rel="noreferrer">${esc(it.title)}</a>
+      <span class="muted small right">${timeAgo(it.when)}</span><div class="muted small">${esc(it.extra||"")}</div> <span class="muted small" title="@${esc(it.repo)}">${esc(it.displayName)}</span>
+    </div>`;
+    let statLine = "";
+    if (it.type === "Commit" && it.stats && (it.stats.additions || it.stats.deletions || it.stats.filesChanged)) {
+      statLine = `<div class="mono small" style="margin-top:4px">
+        <strong>${it.stats.filesChanged ?? 0}</strong> files changed; <span style="color: green">+${it.stats.additions ?? 0}</span> <span style="color: red">-${it.stats.deletions ?? 0}</span> lines
+      </div>`;
+    }
+    return base + statLine + `</div></div>`;
+  }).join('');
 }
 async function refresh(){
   try {

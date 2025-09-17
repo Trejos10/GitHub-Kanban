@@ -103,6 +103,8 @@ type FeedItem = {
   title: string;
   url: string;
   extra?: string;
+  sha?: string;
+  stats?: { sha: string; additions: number; deletions: number; filesChanged: number };
 };
 const ICONS: Record<string, string> = {
   PushEvent: "⬆️",
@@ -135,11 +137,18 @@ function ghHeaders(token?: string, extra?: HeadersInit): Headers {
   return h;
 }
 
-type ETagCache = { info: Map<string, string>; events: Map<string, string> };
-const etags: ETagCache = { info: new Map(), events: new Map() };
+type ETagCache = {
+  info: Map<string, string>;
+  events: Map<string, string>;
+  commits: Map<string, string>;
+};
+const etags: ETagCache = { info: new Map(), events: new Map(), commits: new Map() };
+
 
 let REPO_INFOS = new Map<string, RepoInfo>();
 let FEED_ITEMS: FeedItem[] = [];
+
+const COMMIT_STATS = new Map<string, { sha: string; additions: number; deletions: number; filesChanged: number }>();
 
 function updateRateLimitInfo(res: Response) {
   RATE_LIMIT_INFO = {
@@ -210,6 +219,23 @@ async function loadRepoEvents(repoId: string, token?: string) {
   return events.map((ev) => ({ ...ev, __repo: repoId }));
 }
 
+/** 按需拉取单个 commit 的统计信息（带 ETag 缓存） */
+async function loadCommitStats(repoId: string, sha: string, token?: string) {
+  const key = `${repoId}@${sha}`;
+  if (COMMIT_STATS.has(key)) return COMMIT_STATS.get(key)!;
+  const url = `https://api.github.com/repos/${repoId}/commits/${sha}`;
+  const out = await fetchJsonWithEtag(url, token, { map: etags.commits, key });
+  if (out.status === 304) return COMMIT_STATS.get(key) ?? { sha, additions: 0, deletions: 0, filesChanged: 0 };
+  const data = out.data;
+  const additions = data?.stats?.additions ?? 0;
+  const deletions = data?.stats?.deletions ?? 0;
+  const filesChanged = Array.isArray(data?.files) ? data.files.length : (data?.stats?.total ?? 0);
+  const stats = { sha, additions, deletions, filesChanged };
+  COMMIT_STATS.set(key, stats);
+  return stats;
+}
+
+
 /** ---------------- Event Processing Logic ---------------- */
 function eventToFeedItems(ev: any): FeedItem[] {
   const type = ev.type ?? "default";
@@ -228,6 +254,7 @@ function eventToFeedItems(ev: any): FeedItem[] {
         actor,
         title: `Commit to ${branch}: ${commit.message.split("\n")[0]}`,
         url: `${urlBase}/commit/${commit.sha}`,
+        sha: commit.sha,
         extra: `by ${commit.author.name}`,
       }));
     }
@@ -293,11 +320,14 @@ function rebuildGlobalFeed(cfg: AppConfig) {
     const repoNameMap = new Map(cfg.repos.map(r => [r.id, r.name]));
 
     FEED_ITEMS = allEvents
-      .flatMap(eventToFeedItems) // Returns items with just the repo ID
-      .map(item => ({          // <-- ADDED THIS .map() STEP
-          ...item,
-          // Enrich the item with its displayName
-          displayName: repoNameMap.get(item.repo) || item.repo 
+      .flatMap(eventToFeedItems)
+      .map(item => ({
+        ...item,
+        displayName: repoNameMap.get(item.repo) || item.repo,
+        // 如果是 Commit，尝试把已有缓存的统计回填到条目上
+        stats: (item.type === "Commit" && item.sha)
+          ? COMMIT_STATS.get(`${item.repo}@${item.sha}`)
+          : undefined
       }))
       .sort(byDescTime)
       .slice(0, cfg.feedLimit);
@@ -394,6 +424,17 @@ class UpdateScheduler {
         if (events.length > 0 || !REPO_EVENTS.has(repo.id)) {
           REPO_EVENTS.set(repo.id, events);
         }
+        // 为本 repo 的最近若干 commit 预取统计（控制并发与数量，降低速率压力）
+        const commits: string[] = [];
+        for (const ev of events) {
+          if (ev.type === "PushEvent" && ev.payload?.commits) {
+            for (const c of ev.payload.commits) commits.push(c.sha);
+          }
+        }
+        // 只预取前 5 个未缓存的 commit，避免过度请求
+        const toFetch = commits.filter(sha => !COMMIT_STATS.has(`${repo.id}@${sha}`)).slice(0, 5);
+        await Promise.allSettled(toFetch.map(sha => loadCommitStats(repo.id, sha, this.cfg.githubToken)));
+
       } else if (eventsResult.status === "rejected") {
         console.error(
           `[Update] ❌ Failed to fetch events for ${repo.name}:`,
@@ -439,7 +480,17 @@ async function main() {
     if (path === "/healthz") return new Response("ok");
     if (path === "/api/summary")
       return json({ repos: Array.from(REPO_INFOS.values()) });
-    if (path === "/api/feed") return json({ items: FEED_ITEMS });
+    if (path === "/api/feed") {
+        // 二次回填：服务端返回前，再用缓存兜底一次（避免 rebuild 与加载间的时间差）
+        const items = FEED_ITEMS.map(it => {
+          if (it.type === "Commit" && it.sha) {
+            const cached = COMMIT_STATS.get(`${it.repo}@${it.sha}`);
+            return cached ? { ...it, stats: cached } : it;
+          }
+          return it;
+        });
+        return json({ items });
+      }
     return serveDir(req, { fsRoot: "public", urlRoot: "" });
   });
 
