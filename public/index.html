@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GitHub 多仓实时看板</title>
+<meta name="color-scheme" content="light dark">
+<style>
+  :root { --gap: 12px; --card: #fff; --muted:#666; --bg:#f6f8fa; --border:#e1e4e8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --card:#0d1117; --bg:#010409; --border:#30363d; --muted:#8b949e; }
+    a { color:#58a6ff; }
+  }
+  html,body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;z-index:2}
+  h1{font-size:18px;margin:0 0 6px}
+  main{max-width:1200px;margin:14px auto;padding:0 14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+  @media (max-width:960px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .muted{color:var(--muted);font-size:12px}
+  .title{font-weight:600}
+  .right{margin-left:auto}
+  .repo-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px}
+  .repo-stats{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{border:1px solid var(--border);padding:2px 8px;border-radius:999px;font-size:12px;background:#fafbfc}
+  @media (prefers-color-scheme: dark){ .chip{background:#0b1320} }
+  .feed-item{display:grid;grid-template-columns: 24px 1fr;gap:10px;padding:10px 0;border-bottom:1px dashed var(--border)}
+  .feed-item:last-child{border-bottom:none}
+  .icon{font-size:18px;line-height:24px;text-align:center}
+  .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .small{font-size:12px}
+  .skeleton{background:linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0.12), rgba(0,0,0,0.06));height:14px;border-radius:6px;animation:sh 1.2s infinite}
+  @keyframes sh {0%{background-position:-200px 0}100%{background-position:200px 0}}
+</style>
+</head>
+<body>
+<header>
+  <h1>GitHub 多仓实时看板</h1>
+  <div class="muted" id="meta">初始化中…</div>
+</header>
+<main>
+  <div class="grid">
+    <section class="card">
+      <div class="repo-head">
+        <div class="title">仓库概览 (按最近活动排序)</div>
+        <div class="muted small right" id="summaryTs">—</div>
+      </div>
+      <div id="reposSummary" class="repo-stats"><div class="skeleton" style="width:100%;height:60px"></div></div>
+    </section>
+    <section class="card">
+      <div class="repo-head">
+        <div class="title">最新动态</div>
+        <div class="muted small right" id="feedTs">—</div>
+      </div>
+      <div id="feed"><div class="skeleton" style="width:100%;height:120px"></div></div>
+      <div class="muted small" style="margin-top:6px">数据源：<code>Github Events Api (注意：由于 Github 官方原因，最新动态可能会有长达 8 小时的延迟，请以官网为主）</code></div>
+    </section>
+  </div>
+</main>
+<script>
+const $ = (s)=>document.querySelector(s), meta = $('#meta'), summaryTs = $('#summaryTs'), feedTs = $('#feedTs'), summaryEl = $('#reposSummary'), feedEl = $('#feed');
+const ICONS = { "Commit":"📝", "PushEvent":"⬆️","PullRequestEvent":"🔀","IssuesEvent":"❗","IssueCommentEvent":"💬","CreateEvent":"🌱","DeleteEvent":"🗑️","ReleaseEvent":"🏷️","ForkEvent":"🍴","WatchEvent":"⭐","CommitCommentEvent":"📝","MemberEvent":"👥","public":"📣","default":"📌" };
+function timeAgo(ts) { const s=Math.floor((Date.now()-new Date(ts).getTime())/1000); if(s<60)return`${s}s 前`;const m=Math.floor(s/60);if(m<60)return`${m}m 前`;const h=Math.floor(m/60);if(h<24)return`${h}h 前`;return`${Math.floor(h/24)}d 前`; }
+function esc(s){return (s||"").replace(/[<>&]/g, t=>({ "<":"&lt;",">":"&gt;","&":"&amp;" }[t]));}
+async function getJSON(url){ const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(url+" "+r.status);return r.json();}
+
+// --- THIS IS THE KEY CHANGE ---
+function renderSummary(repos){
+  // Sort repos by pushed_at date, descending (most recent first)
+  const sortedRepos = repos.sort((a, b) => new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime());
+
+  summaryEl.innerHTML = sortedRepos.map(r => `
+    <div class="card" style="flex:1 1 240px">
+      <div class="repo-head">
+        <a class="title" href="${r.html_url}" target="_blank" rel="noreferrer" title="${esc(r.repo)}">${esc(r.displayName)}</a>
+        <span class="muted small">${timeAgo(r.pushed_at)} 更新</span>
+      </div>
+      <div class="repo-stats">
+        <span class="chip">⭐ ${r.stargazers_count}</span> <span class="chip">🍴 ${r.forks_count}</span> <span class="chip">🧵 Open: ${r.open_issues_count}</span>
+      </div>
+      <div class="muted small" style="margin-top:6px">${esc(r.description)}</div>
+    </div>`).join('');
+}
+// --- END OF KEY CHANGE ---
+
+function renderFeed(items){
+  feedEl.innerHTML = items.map(it => `
+    <div class="feed-item">
+      <div class="icon" title="${esc(it.repo)}">${ICONS[it.type]||it.icon||ICONS.default}</div>
+      <div>
+        <div class="flex">
+          <a class="title" href="${it.url}" target="_blank" rel="noreferrer">${esc(it.title)}</a>
+          <span class="muted small">@${esc(it.repo)}</span> <span class="muted small right">${timeAgo(it.when)}</span>
+        </div>
+        <div class="muted small">${esc(it.extra)}</div>
+      </div>
+    </div>`).join('');
+}
+async function refresh(){
+  try {
+    const [sum, feed] = await Promise.all([getJSON('/api/summary'), getJSON('/api/feed')]);
+    renderSummary(sum.repos || []);
+    summaryTs.textContent = new Date().toLocaleString(); // Use local time for UI update time
+    renderFeed(feed.items || []);
+    feedTs.textContent = new Date().toLocaleString();
+    const repoNames = (sum.repos || []).map(r => r.displayName).join(", ");
+    meta.textContent = `监控中：${repoNames}`;
+  } catch(e) { console.error(e); meta.textContent = '加载失败: ' + e.message; }
+}
+(function init(){ refresh(); setInterval(refresh, 15000); })();
+</script>
+</body>
+</html>

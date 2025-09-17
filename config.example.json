@@ -1,0 +1,20 @@
+{
+  "repos": [
+    {
+      "id": "vercel/next.js",
+      "name": "🚀 Next.js"
+    },
+    {
+      "id": "apache/superset",
+      "name": "📊 Superset"
+    },
+    {
+      "id": "denoland/deno",
+      "name": "🦕 Deno"
+    }
+  ],
+  "githubToken": "ghp_xxx_your_token_here",
+  "refreshSeconds": 30,
+  "feedLimit": 120,
+  "port": 8000
+}
