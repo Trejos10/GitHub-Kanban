@@ -12,7 +12,20 @@ services:
       - REPOS=${REPOS}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - REFRESH_SECONDS=${REFRESH_SECONDS:-60}
-      # Pass the new variable
       - REPO_UPDATE_INTERVAL_SECONDS=${REPO_UPDATE_INTERVAL_SECONDS:-10}
       - PORT=${CONTAINER_PORT:-8000}
       - TZ=${TZ:-UTC}
+
+      # ---- 代码质量审计相关（新增）----
+      - CODE_AUDIT_ENABLED=${CODE_AUDIT_ENABLED:-true}
+      - CODE_AUDIT_INTERVAL_HOURS=${CODE_AUDIT_INTERVAL_HOURS:-4}
+      - CODE_AUDIT_TMP=${CODE_AUDIT_TMP:-/app/.audit/repos}
+      - CODE_AUDIT_LANG=${CODE_AUDIT_LANG:-zh-CN}
+      # 传递给 fuck-u-code 的附加参数（可选），示例：--top 10 --issues 5 --summary
+      - CODE_AUDIT_ARGS=${CODE_AUDIT_ARGS:---summary --top 10 --issues 5}
+      - CODE_AUDIT_MAX_REPORTS=${CODE_AUDIT_MAX_REPORTS:-200}
+    volumes:
+      - audit-cache:/app/.audit  # 持久化克隆目录，减少后续拉取流量
+
+volumes:
+  audit-cache:

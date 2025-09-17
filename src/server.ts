@@ -1,21 +1,30 @@
 // src/server.ts
 import { serveDir } from "https://deno.land/std@0.224.0/http/file_server.ts";
+import * as path from "https://deno.land/std@0.224.0/path/mod.ts";
 
 /** ---------------- Config ---------------- */
 type ConfigRepo = { id: string; name: string };
 type AppConfig = {
   repos: ConfigRepo[];
   githubToken?: string;
-  globalRefreshSeconds: number; // Renamed from refreshSeconds for clarity
-  repoUpdateIntervalSeconds: number; // New: interval between individual repo updates
+  globalRefreshSeconds: number;
+  repoUpdateIntervalSeconds: number;
   feedLimit: number;
   port: number;
+
+  // ---- Code Audit ----
+  codeAuditEnabled?: boolean;
+  codeAuditIntervalHours: number;
+  codeAuditTmpDir: string;
+  codeAuditLang: string;
+  codeAuditArgs: string;
+  codeAuditMaxReports: number;
 };
 
-async function fileExists(path: string) {
+async function fileExists(p: string) {
   try {
-    const st = await Deno.stat(path);
-    return st.isFile;
+    const st = await Deno.stat(p);
+    return st.isFile || st.isDirectory;
   } catch {
     return false;
   }
@@ -23,7 +32,7 @@ async function fileExists(path: string) {
 
 async function loadConfig(): Promise<AppConfig> {
   const defaultPath = Deno.env.get("CONFIG_PATH") ?? "./config.json";
-  let fileCfg: Partial<AppConfig> = {};
+  let fileCfg: any = {};
   if (await fileExists(defaultPath)) {
     try {
       fileCfg = JSON.parse(await Deno.readTextFile(defaultPath));
@@ -44,20 +53,31 @@ async function loadConfig(): Promise<AppConfig> {
 
   const env: Partial<AppConfig> = {
     repos: envRepos,
-    githubToken: Deno.env.get("GITHUB_TOKEN") ?? undefined,
-    globalRefreshSeconds: Number(Deno.env.get("REFRESH_SECONDS") ?? NaN), // Still support old env var
+    githubToken: Deno.env.get("GITHUB_TOKEN") ?? fileCfg.githubToken ?? undefined,
+    globalRefreshSeconds: Number(Deno.env.get("REFRESH_SECONDS") ?? NaN),
     repoUpdateIntervalSeconds: Number(
       Deno.env.get("REPO_UPDATE_INTERVAL_SECONDS") ?? NaN
     ),
     feedLimit: Number(Deno.env.get("FEED_LIMIT") ?? NaN),
     port: Number(Deno.env.get("PORT") ?? NaN),
+
+    // ---- Code Audit envs ----
+    codeAuditEnabled:
+      (Deno.env.get("CODE_AUDIT_ENABLED") ?? "false").toLowerCase() === "true",
+    codeAuditIntervalHours: Number(
+      Deno.env.get("CODE_AUDIT_INTERVAL_HOURS") ?? NaN
+    ),
+    codeAuditTmpDir: Deno.env.get("CODE_AUDIT_TMP") ?? "",
+    codeAuditLang: Deno.env.get("CODE_AUDIT_LANG") ?? "",
+    codeAuditArgs: Deno.env.get("CODE_AUDIT_ARGS") ?? "",
+    codeAuditMaxReports: Number(Deno.env.get("CODE_AUDIT_MAX_REPORTS") ?? NaN),
   };
 
   const cfgRepos = env.repos ?? fileCfg.repos ?? [];
 
   const cfg: AppConfig = {
     repos: cfgRepos.filter((r) => r && r.id),
-    githubToken: env.githubToken ?? fileCfg.githubToken ?? undefined,
+    githubToken: env.githubToken ?? undefined,
     globalRefreshSeconds: Number.isFinite(env.globalRefreshSeconds)
       ? (env.globalRefreshSeconds as number)
       : fileCfg.refreshSeconds ?? 60,
@@ -70,6 +90,18 @@ async function loadConfig(): Promise<AppConfig> {
     port: Number.isFinite(env.port)
       ? (env.port as number)
       : fileCfg.port ?? 8000,
+
+    // defaults for code audit
+    codeAuditEnabled: env.codeAuditEnabled ?? false,
+    codeAuditIntervalHours: Number.isFinite(env.codeAuditIntervalHours)
+      ? (env.codeAuditIntervalHours as number)
+      : 4,
+    codeAuditTmpDir: env.codeAuditTmpDir || path.join(".audit", "repos"),
+    codeAuditLang: env.codeAuditLang || "zh-CN",
+    codeAuditArgs: env.codeAuditArgs || "--summary --top 10 --issues 5",
+    codeAuditMaxReports: Number.isFinite(env.codeAuditMaxReports)
+      ? (env.codeAuditMaxReports as number)
+      : 200,
   };
 
   if (!cfg.repos.length) {
@@ -79,6 +111,7 @@ async function loadConfig(): Promise<AppConfig> {
       { id: "apache/superset", name: "📊 Superset" },
     ];
   }
+
   return cfg;
 }
 
@@ -219,7 +252,6 @@ async function loadRepoEvents(repoId: string, token?: string) {
   return events.map((ev) => ({ ...ev, __repo: repoId }));
 }
 
-/** 按需拉取单个 commit 的统计信息（带 ETag 缓存） */
 async function loadCommitStats(repoId: string, sha: string, token?: string) {
   const key = `${repoId}@${sha}`;
   if (COMMIT_STATS.has(key)) return COMMIT_STATS.get(key)!;
@@ -311,10 +343,8 @@ function byDescTime(a: FeedItem, b: FeedItem) {
   return new Date(b.when).getTime() - new Date(a.when).getTime();
 }
 
-// Map to store events per repo to avoid re-processing
 const REPO_EVENTS = new Map<string, any[]>();
 
-// Rebuild the global feed from cached per-repo events
 function rebuildGlobalFeed(cfg: AppConfig) {
     const allEvents = Array.from(REPO_EVENTS.values()).flat();
     const repoNameMap = new Map(cfg.repos.map(r => [r.id, r.name]));
@@ -324,7 +354,6 @@ function rebuildGlobalFeed(cfg: AppConfig) {
       .map(item => ({
         ...item,
         displayName: repoNameMap.get(item.repo) || item.repo,
-        // 如果是 Commit，尝试把已有缓存的统计回填到条目上
         stats: (item.type === "Commit" && item.sha)
           ? COMMIT_STATS.get(`${item.repo}@${item.sha}`)
           : undefined
@@ -368,7 +397,6 @@ class UpdateScheduler {
   }
 
   private buildQueue() {
-    // Sort repos by most recently pushed to prioritize active repos
     const sortedRepos = [...this.cfg.repos].sort((a, b) => {
       const infoA = REPO_INFOS.get(a.id);
       const infoB = REPO_INFOS.get(b.id);
@@ -402,7 +430,6 @@ class UpdateScheduler {
     const t0 = Date.now();
     console.log(`[Update] ⏳ Updating ${repo.name} (${repo.id})...`);
     try {
-      // Fetch info and events concurrently for a single repo
       const [infoResult, eventsResult] = await Promise.allSettled([
         loadRepoInfo(repo.id, this.cfg.githubToken),
         loadRepoEvents(repo.id, this.cfg.githubToken),
@@ -420,18 +447,15 @@ class UpdateScheduler {
 
       if (eventsResult.status === "fulfilled") {
         const events = eventsResult.value;
-        // Only update if we got new data (not from 304)
         if (events.length > 0 || !REPO_EVENTS.has(repo.id)) {
           REPO_EVENTS.set(repo.id, events);
         }
-        // 为本 repo 的最近若干 commit 预取统计（控制并发与数量，降低速率压力）
         const commits: string[] = [];
         for (const ev of events) {
           if (ev.type === "PushEvent" && ev.payload?.commits) {
             for (const c of ev.payload.commits) commits.push(c.sha);
           }
         }
-        // 只预取前 5 个未缓存的 commit，避免过度请求
         const toFetch = commits.filter(sha => !COMMIT_STATS.has(`${repo.id}@${sha}`)).slice(0, 5);
         await Promise.allSettled(toFetch.map(sha => loadCommitStats(repo.id, sha, this.cfg.githubToken)));
 
@@ -458,6 +482,127 @@ class UpdateScheduler {
   }
 }
 
+/** ---------------- Code Audit (fuck-u-code) ---------------- */
+type QualityReport = {
+  repo: string;
+  displayName: string;
+  score: number | null;     // 0~100; null 表示未能解析
+  markdown: string;         // 完整 Markdown 报告
+  updatedAt: string;        // ISO
+  localPath: string;        // 缓存目录
+};
+
+const QUALITY_REPORTS = new Map<string, QualityReport>();
+
+async function run(cmd: string, args: string[], opts: { cwd?: string } = {}) {
+  const p = new Deno.Command(cmd, { args, cwd: opts.cwd, stdin: "null", stdout: "piped", stderr: "piped" });
+  const { code, stdout, stderr } = await p.output();
+  const dec = new TextDecoder();
+  return { code, out: dec.decode(stdout), err: dec.decode(stderr) };
+}
+
+function parseShitIndex(markdown: string): number | null {
+  const regs = [
+    /质量评分[^\d]{0,10}(\d+(?:\.\d+)?)\/100/i,
+  ];
+  for (const r of regs) {
+    const m = r.exec(markdown);
+    if (m) {
+      const v = parseFloat(m[1]);
+      if (!Number.isNaN(v) && v >= 0 && v <= 100) return v;
+    }
+  }
+  return null;
+}
+
+function repoDir(base: string, repoId: string) {
+  return path.join(base, repoId.replace(/\//g, "__"));
+}
+
+async function ensureRepo(cloneBase: string, repoId: string, token?: string, defaultBranch?: string) {
+  const dir = repoDir(cloneBase, repoId);
+  const exists = await fileExists(path.join(dir, ".git"));
+  const branch = defaultBranch || "main";
+
+  await Deno.mkdir(dir, { recursive: true });
+
+  if (!exists) {
+    const remote = token ? `https://${encodeURIComponent(token)}@github.com/${repoId}.git`
+                         : `https://github.com/${repoId}.git`;
+    console.log(`[Audit] Cloning ${repoId} -> ${dir}`);
+    const ret = await run("git", ["clone", "--depth", "1", "-b", branch, remote, dir]);
+    if (ret.code !== 0) {
+      // 尝试不指定分支（兼容 master）
+      const retry = await run("git", ["clone", "--depth", "1", remote, dir]);
+      if (retry.code !== 0) throw new Error(`git clone failed: ${ret.err || retry.err}`);
+    }
+    // 清除含 token 的 remote url
+    await run("git", ["-C", dir, "remote", "set-url", "origin", `https://github.com/${repoId}.git`]);
+  } else {
+    await run("git", ["-C", dir, "fetch", "origin", "--prune"]);
+    // 确定默认分支
+    const def = defaultBranch || "main";
+    await run("git", ["-C", dir, "checkout", def]).catch(()=>{});
+    await run("git", ["-C", dir, "reset", "--hard", `origin/${def}`]);
+  }
+
+  return dir;
+}
+
+async function runFuckUCode(scanPath: string, lang: string, extraArgs: string) {
+  const args = ["analyze", "--markdown", "--lang", lang, ...extraArgs.split(" ").filter(Boolean), scanPath];
+  const ret = await run("fuck-u-code", args);
+  if (ret.code !== 0 && !ret.out) {
+    throw new Error(`fuck-u-code failed: ${ret.err}`);
+  }
+  return ret.out || ret.err || "";
+}
+
+class CodeAuditScheduler {
+  private running = false;
+  constructor(private cfg: AppConfig) {}
+  start() {
+    if (!this.cfg.codeAuditEnabled) return;
+    const ms = Math.max(1, this.cfg.codeAuditIntervalHours) * 3600_000;
+    console.log(`[Audit] 🧪 Code audit enabled. Interval: ${this.cfg.codeAuditIntervalHours}h`);
+    this.cycle(); // 立即跑一轮
+    setInterval(()=> this.cycle(), ms);
+  }
+  private async cycle() {
+    if (this.running) return;
+    this.running = true;
+    try {
+      await Deno.mkdir(this.cfg.codeAuditTmpDir, { recursive: true });
+      for (const r of this.cfg.repos) {
+        try {
+          const def = REPO_INFOS.get(r.id)?.default_branch ?? "main";
+          const dir = await ensureRepo(this.cfg.codeAuditTmpDir, r.id, this.cfg.githubToken, def);
+          const output = await runFuckUCode(dir, this.cfg.codeAuditLang, this.cfg.codeAuditArgs);
+          const score = parseShitIndex(output);
+          const rep: QualityReport = {
+            repo: r.id,
+            displayName: r.name,
+            score,
+            markdown: output || "*（空）*",
+            updatedAt: new Date().toISOString(),
+            localPath: dir,
+          };
+          QUALITY_REPORTS.set(r.id, rep);
+          if (QUALITY_REPORTS.size > this.cfg.codeAuditMaxReports) {
+            const firstKey = QUALITY_REPORTS.keys().next().value;
+            if (firstKey) QUALITY_REPORTS.delete(firstKey);
+          }
+          console.log(`[Audit] ✓ ${r.name} (${r.id}) score=${score ?? "N/A"}`);
+        } catch (e) {
+          console.error(`[Audit] ✗ ${r.name} (${r.id}) failed:`, e);
+        }
+      }
+    } finally {
+      this.running = false;
+    }
+  }
+}
+
 /** ---------------- HTTP server ---------------- */
 async function main() {
   const cfg = await loadConfig();
@@ -468,6 +613,9 @@ async function main() {
   // Periodically rebuild the queue to re-prioritize based on new activity
   setInterval(() => scheduler.start(), cfg.globalRefreshSeconds * 1000);
 
+  // Start the code audit scheduler
+  new CodeAuditScheduler(cfg).start();
+
   function json(data: unknown, init?: ResponseInit) {
     return new Response(JSON.stringify(data), {
       headers: { "content-type": "application/json; charset=utf-8" },
@@ -476,12 +624,15 @@ async function main() {
   }
 
   Deno.serve({ port: cfg.port }, (req: Request) => {
-    const path = new URL(req.url).pathname;
-    if (path === "/healthz") return new Response("ok");
-    if (path === "/api/summary")
+    const url = new URL(req.url);
+    const pathName = url.pathname;
+    
+    if (pathName === "/healthz") return new Response("ok");
+
+    if (pathName === "/api/summary")
       return json({ repos: Array.from(REPO_INFOS.values()) });
-    if (path === "/api/feed") {
-        // 二次回填：服务端返回前，再用缓存兜底一次（避免 rebuild 与加载间的时间差）
+
+    if (pathName === "/api/feed") {
         const items = FEED_ITEMS.map(it => {
           if (it.type === "Commit" && it.sha) {
             const cached = COMMIT_STATS.get(`${it.repo}@${it.sha}`);
@@ -490,7 +641,22 @@ async function main() {
           return it;
         });
         return json({ items });
+    }
+    
+    // New: Code Quality API
+    if (pathName === "/api/quality") {
+      const repoQuery = url.searchParams.get("repo");
+      if (repoQuery) {
+        const rep = QUALITY_REPORTS.get(repoQuery);
+        if (!rep) return json({ error: "not_found" }, { status: 404 });
+        return json(rep);
       }
+      const list = Array.from(QUALITY_REPORTS.values())
+        .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+        .map(({ markdown, ...rest }) => rest); // Exclude large markdown from list
+      return json({ items: list });
+    }
+
     return serveDir(req, { fsRoot: "public", urlRoot: "" });
   });
 
