@@ -26,6 +26,7 @@ EXPOSE 8000
 # cache deps
 RUN deno cache src/main.ts
 
-USER root
+RUN mkdir -p /app/.audit/repos \
+    && chown -R deno:deno /app
 
 CMD ["deno", "run", "-A", "--no-lock", "src/main.ts"]
