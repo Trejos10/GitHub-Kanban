@@ -7,28 +7,28 @@ import { rebuildGlobalFeed } from "./services/feed.ts";
 import { makeHandler } from "./web/routes.ts";
 
 async function main() {
-  const cfg = await loadConfig();
-  const store = new MemoryStore();
-  const gh = new GitHubClient(cfg.githubToken);
+    const cfg = await loadConfig();
+    const store = new MemoryStore();
+    const gh = new GitHubClient(cfg.githubToken);
 
-  const scheduler = new UpdateScheduler(cfg, store, gh);
-  await scheduler.initialLoad();
+    const scheduler = new UpdateScheduler(cfg, store, gh);
+    await scheduler.initialLoad();
 
-  // 周期性重建队列（根据活跃度动态排序）
-  setInterval(() => scheduler.start(), cfg.globalRefreshSeconds * 1000);
+    // 周期性重建队列（根据活跃度动态排序）
+    setInterval(() => scheduler.start(), cfg.globalRefreshSeconds * 1000);
 
-  // 启动代码质量巡检
-  new CodeAuditScheduler(cfg, store).start();
+    // 启动代码质量巡检
+    new CodeAuditScheduler(cfg, store).start();
 
-  // 暴露 HTTP 服务
-  Deno.serve({ port: cfg.port }, makeHandler(cfg, store));
+    // 暴露 HTTP 服务
+    Deno.serve({ port: cfg.port }, makeHandler(cfg, store));
 
-  // 启动日志
-  rebuildGlobalFeed(cfg, store);
-  console.log(`\n🚀 GitHub Dashboard running at http://localhost:${cfg.port}`);
-  console.log(`   Watching ${cfg.repos.length} repos: ${cfg.repos.map((r) => r.name).join(", ")}`);
-  console.log(`   Per-repo update interval: ${cfg.repoUpdateIntervalSeconds}s`);
-  console.log(`   Queue re-sort interval: ${cfg.globalRefreshSeconds}s`);
+    // 启动日志
+    rebuildGlobalFeed(cfg, store);
+    console.log(`\n🚀 GitHub Dashboard running at http://localhost:${cfg.port}`);
+    console.log(`   Watching ${cfg.repos.length} repos: ${cfg.repos.map((r) => r.name).join(", ")}`);
+    console.log(`   Per-repo update interval: ${cfg.repoUpdateIntervalSeconds}s`);
+    console.log(`   Queue re-sort interval: ${cfg.globalRefreshSeconds}s`);
 }
 
 await main();

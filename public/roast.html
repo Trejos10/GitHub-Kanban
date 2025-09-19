@@ -1,87 +1,205 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>代码屎山排行榜 · GitHub 多仓实时看板</title>
-<meta name="color-scheme" content="light dark" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<style>
-  :root{--gap:12px;--card:#fff;--muted:#666;--bg:#f6f8fa;--border:#e1e4e8;--radius:10px}
-  @media (prefers-color-scheme: dark){:root{--card:#0d1117;--bg:#010409;--border:#30363d;--muted:#8b949e} a{color:#58a6ff}}
-  html,body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;z-index:2}
-  h1{font-size:clamp(16px,2.2vw,20px);margin:0 0 6px}
-  main{max-width:min(1400px,100%);margin:14px auto;padding:0 14px}
-  .grid{display:grid;grid-template-columns:360px 1fr;gap:var(--gap)}
-  @media (max-width:960px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
-  .muted{color:var(--muted);font-size:12px}
-  .row{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px dashed var(--border);cursor:pointer}
-  .row:hover{background:rgba(0,0,0,.03)}
-  .score{font-weight:700;min-width:36px;text-align:right}
-  .badge{border:1px solid var(--border);border-radius:999px;font-size:12px;padding:2px 8px}
-  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-  .list{max-height:70vh;overflow:auto}
-  .content{min-height:60vh}
-  .topbar{display:flex;gap:10px;align-items:center}
-</style>
-</head>
-<body>
-<header class="topbar">
-  <h1 style="flex:1">代码屎山排行榜</h1>
-  <a class="badge" href="/" title="回到仪表盘"><i class="fa-solid fa-gauge"></i> 仪表盘</a>
-  <a class="badge" href="https://github.com/CodeBoy2006/GitHub-Kanban" target="_blank" rel="noreferrer"><i class="fa-brands fa-github"></i> 源码</a>
-</header>
-<main>
-  <div class="grid">
-    <section class="card">
-      <div class="muted">按「屎山指数」从高到低排序（越高越烂 😂）</div>
-      <div id="list" class="list"></div>
-      <div id="ts" class="muted" style="margin-top:8px">—</div>
-    </section>
-    <section class="card">
-      <div id="title" style="font-weight:600;margin-bottom:6px">请选择左侧仓库查看报告</div>
-      <div id="detail" class="content mono" style="white-space:pre-wrap;overflow:auto"></div>
-    </section>
-  </div>
-</main>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
-const listEl = document.getElementById('list');
-const detailEl = document.getElementById('detail');
-const titleEl = document.getElementById('title');
-const tsEl = document.getElementById('ts');
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>代码屎山排行榜 · GitHub 多仓实时看板</title>
+    <meta name="color-scheme" content="light dark" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <style>
+      :root {
+        --gap: 12px;
+        --card: #fff;
+        --muted: #666;
+        --bg: #f6f8fa;
+        --border: #e1e4e8;
+        --radius: 10px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --card: #0d1117;
+          --bg: #010409;
+          --border: #30363d;
+          --muted: #8b949e;
+        }
+        a {
+          color: #58a6ff;
+        }
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--bg);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
+          Arial;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        padding: 10px 14px;
+        z-index: 2;
+      }
+      h1 {
+        font-size: clamp(16px, 2.2vw, 20px);
+        margin: 0 0 6px;
+      }
+      main {
+        max-width: min(1400px, 100%);
+        margin: 14px auto;
+        padding: 0 14px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: var(--gap);
+      }
+      @media (max-width: 960px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border-bottom: 1px dashed var(--border);
+        cursor: pointer;
+      }
+      .row:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+      .score {
+        font-weight: 700;
+        min-width: 36px;
+        text-align: right;
+      }
+      .badge {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 12px;
+        padding: 2px 8px;
+      }
+      .mono {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+      }
+      .list {
+        max-height: 70vh;
+        overflow: auto;
+      }
+      .content {
+        min-height: 60vh;
+      }
+      .topbar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 style="flex: 1">代码屎山排行榜</h1>
+      <a class="badge" href="/" title="回到仪表盘"
+        ><i class="fa-solid fa-gauge"></i> 仪表盘</a
+      >
+      <a
+        class="badge"
+        href="https://github.com/CodeBoy2006/GitHub-Kanban"
+        target="_blank"
+        rel="noreferrer"
+        ><i class="fa-brands fa-github"></i> 源码</a
+      >
+    </header>
+    <main>
+      <div class="grid">
+        <section class="card">
+          <div class="muted">按「屎山指数」从高到低排序（越高越烂 😂）</div>
+          <div id="list" class="list"></div>
+          <div id="ts" class="muted" style="margin-top: 8px">—</div>
+        </section>
+        <section class="card">
+          <div id="title" style="font-weight: 600; margin-bottom: 6px">
+            请选择左侧仓库查看报告
+          </div>
+          <div
+            id="detail"
+            class="content mono"
+            style="white-space: pre-wrap; overflow: auto"
+          ></div>
+        </section>
+      </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+      const listEl = document.getElementById("list");
+      const detailEl = document.getElementById("detail");
+      const titleEl = document.getElementById("title");
+      const tsEl = document.getElementById("ts");
 
-function esc(s){return (s||"").replace(/[<>&]/g,t=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[t]))}
-function renderList(items){
-  listEl.innerHTML = items.map((it,idx)=>`
+      function esc(s) {
+        return (s || "").replace(
+          /[<>&]/g,
+          (t) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[t])
+        );
+      }
+      function renderList(items) {
+        listEl.innerHTML = items
+          .map(
+            (it, idx) => `
     <div class="row" data-repo="${it.repo}">
-      <div class="score">${it.score ?? '—'}</div>
+      <div class="score">${it.score ?? "—"}</div>
       <div>
         <div style="font-weight:600">${esc(it.displayName)}</div>
         <div class="muted mono">${esc(it.repo)}</div>
       </div>
     </div>
-  `).join('');
-  listEl.querySelectorAll('.row').forEach(el=>{
-    el.addEventListener('click', async ()=>{
-      const repo = el.getAttribute('data-repo');
-      const r = await fetch('/api/quality?repo='+encodeURIComponent(repo)).then(r=>r.json());
-      titleEl.textContent = `${r.displayName}（屎山指数：${r.score ?? '—'}）`;
-      // r.markdown -> HTML
-      detailEl.innerHTML = marked.parse(r.markdown || '*暂无报告*');
-    });
-  });
-}
+  `
+          )
+          .join("");
+        listEl.querySelectorAll(".row").forEach((el) => {
+          el.addEventListener("click", async () => {
+            const repo = el.getAttribute("data-repo");
+            const r = await fetch(
+              "/api/quality?repo=" + encodeURIComponent(repo)
+            ).then((r) => r.json());
+            titleEl.textContent = `${r.displayName}（屎山指数：${
+              r.score ?? "—"
+            }）`;
+            // r.markdown -> HTML
+            detailEl.innerHTML = marked.parse(r.markdown || "*暂无报告*");
+          });
+        });
+      }
 
-async function refresh(){
-  const data = await fetch('/api/quality').then(r=>r.json());
-  renderList(data.items || []);
-  tsEl.textContent = '更新于：' + new Date().toLocaleString();
-}
-refresh();
-setInterval(refresh, 300*1000);
-</script>
-</body>
+      async function refresh() {
+        const data = await fetch("/api/quality").then((r) => r.json());
+        renderList(data.items || []);
+        tsEl.textContent = "更新于：" + new Date().toLocaleString();
+      }
+      refresh();
+      setInterval(refresh, 300 * 1000);
+    </script>
+  </body>
 </html>
