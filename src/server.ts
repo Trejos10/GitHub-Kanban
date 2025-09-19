@@ -98,7 +98,7 @@ async function loadConfig(): Promise<AppConfig> {
       : 4,
     codeAuditTmpDir: env.codeAuditTmpDir || path.join(".audit", "repos"),
     codeAuditLang: env.codeAuditLang || "zh-CN",
-    codeAuditArgs: env.codeAuditArgs || "--summary --top 10 --issues 5",
+    codeAuditArgs: env.codeAuditArgs || "--verbose --summary --top 10 --issues 5",
     codeAuditMaxReports: Number.isFinite(env.codeAuditMaxReports)
       ? (env.codeAuditMaxReports as number)
       : 200,
