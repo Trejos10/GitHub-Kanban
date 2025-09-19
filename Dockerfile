@@ -26,7 +26,6 @@ EXPOSE 8000
 # cache deps
 RUN deno cache src/main.ts
 
-# 将 /app 目录的所有权交给 deno 用户
-RUN chown -R deno:deno /app
+USER root
 
 CMD ["deno", "run", "-A", "--no-lock", "src/main.ts"]
