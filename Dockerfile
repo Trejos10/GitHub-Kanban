@@ -23,7 +23,10 @@ COPY . .
 ENV PORT=8000
 EXPOSE 8000
 
-# cache deps (可选)
-# RUN deno cache src/server.ts
+# cache deps
+RUN deno cache src/main.ts
 
-CMD ["deno", "run", "-A", "--no-lock", "src/server.ts"]
+# 将 /app 目录的所有权交给 deno 用户
+RUN chown -R deno:deno /app
+
+CMD ["deno", "run", "-A", "--no-lock", "src/main.ts"]
