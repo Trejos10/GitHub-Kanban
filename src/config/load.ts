@@ -89,7 +89,7 @@ export async function loadConfig(): Promise<AppConfig> {
         codeAuditArgs:
             Deno.env.get("CODE_AUDIT_ARGS") ??
             (fileCfg.codeAuditArgs as string | undefined) ??
-            "--verbose --summary --top 10 --issues 5",
+            "--verbose --top 10 --issues 5",
         codeAuditMaxReports:
             envNum("CODE_AUDIT_MAX_REPORTS") ??
             (fileCfg.codeAuditMaxReports as number | undefined) ??
