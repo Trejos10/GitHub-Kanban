@@ -116,21 +116,45 @@
         gap: 10px;
         align-items: center;
       }
+
+      /* --- Modified styles for GitHub Icon --- */
+      .github-icon {
+        position: absolute;
+        top: 50%;
+        right: 14px;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 28px; /* Control icon size */
+        transition: color 0.2s;
+        line-height: 1;
+        min-width: var(--tap);
+        min-height: var(--tap);
+      }
+      .github-icon:hover {
+        color: #000;
+      } /* Light mode hover */
     </style>
   </head>
   <body>
     <header class="topbar">
       <h1 style="flex: 1">代码屎山排行榜</h1>
-      <a class="badge" href="/" title="回到仪表盘"
-        ><i class="fa-solid fa-gauge"></i> 仪表盘</a
-      >
       <a
-        class="badge"
-        href="https://github.com/CodeBoy2006/GitHub-Kanban"
-        target="_blank"
-        rel="noreferrer"
-        ><i class="fa-brands fa-github"></i> 源码</a
+        href="/index.html"
+        class="github-icon"
+        style="right: 54px"
+        aria-label="返回看板"
       >
+        <i class="fa-solid fa-gauge"></i>
+      </a>
+      <a
+        href="https://github.com/CodeBoy2006/GitHub-Kanban"
+        class="github-icon"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="View on GitHub"
+      >
+        <i class="fa-brands fa-github"></i>
+      </a>
     </header>
     <main>
       <div class="grid">
