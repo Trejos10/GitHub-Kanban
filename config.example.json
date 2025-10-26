@@ -14,7 +14,15 @@
     }
   ],
   "githubToken": "ghp_xxx_your_token_here",
-  "refreshSeconds": 30,
+  "globalRefreshSeconds": 60,
+  "repoUpdateIntervalSeconds": 10,
   "feedLimit": 120,
-  "port": 8000
+  "port": 8000,
+  "codeAuditEnabled": false,
+  "codeAuditIntervalHours": 4,
+  "codeAuditTmpDir": ".audit/repos",
+  "codeAuditLang": "zh-CN",
+  "codeAuditArgs": "--verbose --top 10 --issues 5",
+  "codeAuditMaxReports": 200,
+  "codeAuditCli": "fuck-u-code"
 }
