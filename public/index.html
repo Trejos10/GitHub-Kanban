@@ -41,6 +41,19 @@
           color: #fff;
         } /* Dark mode hover */
       }
+      [data-theme="dark"] {
+        --card: #0d1117;
+        --bg: #010409;
+        --border: #30363d;
+        --muted: #8b949e;
+      }
+      [data-theme="dark"] a {
+        color: #58a6ff;
+      }
+      [data-theme="dark"] .github-icon:hover,
+      [data-theme="dark"] .theme-toggle:hover {
+        color: #fff;
+      }
       html,
       body {
         margin: 0;
@@ -200,6 +213,28 @@
       .github-icon:hover {
         color: #000;
       } /* Light mode hover */
+      .theme-toggle {
+        position: absolute;
+        top: 50%;
+        right: 94px;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 24px;
+        transition: color 0.2s;
+        cursor: pointer;
+        min-width: var(--tap);
+        min-height: var(--tap);
+        border: none;
+        background: none;
+      }
+      .theme-toggle:hover {
+        color: #000;
+      }
+      @media (prefers-color-scheme: dark) {
+        .theme-toggle:hover {
+          color: #fff;
+        }
+      }
     </style>
   </head>
   <body>
@@ -207,7 +242,7 @@
       <h1>GitHub 多仓实时看板</h1>
       <div class="muted" id="meta">初始化中…</div>
       <a
-        href="https://github.com/CodeBoy2006/GitHub-Kanban"
+        href="https://github.com/Trejos10/GitHub-Kanban"
         class="github-icon"
         target="_blank"
         rel="noopener noreferrer"
@@ -215,6 +250,13 @@
       >
         <i class="fa-brands fa-github"></i>
       </a>
+      <button
+        class="theme-toggle"
+        onclick="toggleTheme()"
+        aria-label="切换主题"
+      >
+        <i class="fa-solid fa-moon" id="theme-icon"></i>
+      </button>
       <a
         href="/shit-ranking.html"
         class="github-icon"
@@ -392,7 +434,33 @@
           meta.textContent = "加载失败: " + e.message;
         }
       }
+      function toggleTheme() {
+        const html = document.documentElement;
+        const icon = document.getElementById('theme-icon');
+        const isDark = html.getAttribute('data-theme') === 'dark';
+        
+        if (isDark) {
+          html.removeAttribute('data-theme');
+          icon.className = 'fa-solid fa-moon';
+          localStorage.setItem('theme', 'light');
+        } else {
+          html.setAttribute('data-theme', 'dark');
+          icon.className = 'fa-solid fa-sun';
+          localStorage.setItem('theme', 'dark');
+        }
+      }
+      
+      function initTheme() {
+        const saved = localStorage.getItem('theme');
+        const icon = document.getElementById('theme-icon');
+        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          icon.className = 'fa-solid fa-sun';
+        }
+      }
+      
       (function init() {
+        initTheme();
         refresh();
         setInterval(refresh, 15000);
       })();
