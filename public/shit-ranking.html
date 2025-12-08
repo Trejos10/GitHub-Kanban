@@ -133,11 +133,48 @@
       .github-icon:hover {
         color: #000;
       } /* Light mode hover */
+      .theme-toggle {
+        position: absolute;
+        top: 50%;
+        right: 94px;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 24px;
+        transition: color 0.2s;
+        cursor: pointer;
+        min-width: var(--tap);
+        min-height: var(--tap);
+        border: none;
+        background: none;
+      }
+      .theme-toggle:hover {
+        color: #000;
+      }
+      [data-theme="dark"] {
+        --card: #0d1117;
+        --bg: #010409;
+        --border: #30363d;
+        --muted: #8b949e;
+      }
+      [data-theme="dark"] a {
+        color: #58a6ff;
+      }
+      [data-theme="dark"] .github-icon:hover,
+      [data-theme="dark"] .theme-toggle:hover {
+        color: #fff;
+      }
     </style>
   </head>
   <body>
     <header class="topbar">
       <h1 style="flex: 1">代码屎山排行榜</h1>
+      <button
+        class="theme-toggle"
+        onclick="toggleTheme()"
+        aria-label="切换主题"
+      >
+        <i class="fa-solid fa-moon" id="theme-icon"></i>
+      </button>
       <a
         href="/index.html"
         class="github-icon"
@@ -147,7 +184,7 @@
         <i class="fa-solid fa-gauge"></i>
       </a>
       <a
-        href="https://github.com/CodeBoy2006/GitHub-Kanban"
+        href="https://github.com/Trejos10/GitHub-Kanban"
         class="github-icon"
         target="_blank"
         rel="noopener noreferrer"
@@ -222,6 +259,32 @@
         renderList(data.items || []);
         tsEl.textContent = "更新于：" + new Date().toLocaleString();
       }
+      function toggleTheme() {
+        const html = document.documentElement;
+        const icon = document.getElementById('theme-icon');
+        const isDark = html.getAttribute('data-theme') === 'dark';
+        
+        if (isDark) {
+          html.removeAttribute('data-theme');
+          icon.className = 'fa-solid fa-moon';
+          localStorage.setItem('theme', 'light');
+        } else {
+          html.setAttribute('data-theme', 'dark');
+          icon.className = 'fa-solid fa-sun';
+          localStorage.setItem('theme', 'dark');
+        }
+      }
+      
+      function initTheme() {
+        const saved = localStorage.getItem('theme');
+        const icon = document.getElementById('theme-icon');
+        if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          icon.className = 'fa-solid fa-sun';
+        }
+      }
+      
+      initTheme();
       refresh();
       setInterval(refresh, 300 * 1000);
     </script>
